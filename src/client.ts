@@ -53,6 +53,21 @@ export const rateLimitWaitMs = (response: Response) => {
 const defaultSleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms))
 
+// A 2xx from a write (kill, restore, enable and friends) may carry an empty or
+// non-JSON body, 204 included: throwing in response.json() there would report
+// a write that already happened as a failure and invite a retry. Mocks that
+// only provide json() still take that path.
+const parseJsonBody = async (response: Response): Promise<unknown> => {
+  if (typeof response.text !== "function") return response.json()
+  const text = await response.text().catch(() => "")
+  if (!text) return null
+  try {
+    return JSON.parse(text)
+  } catch {
+    return null
+  }
+}
+
 export const createClient = (options: FmeClientOptions): FmeClient => {
   // The key lives in this closure only, so logging or serialising the client
   // can never print it.
@@ -116,7 +131,7 @@ export const createClient = (options: FmeClientOptions): FmeClient => {
         return { ok: false, message, status: response.status }
       }
       if (!expectBody) return { ok: true, data: undefined as T }
-      return { ok: true, data: (await response.json()) as T }
+      return { ok: true, data: (await parseJsonBody(response)) as T }
     } catch (e) {
       const message = e instanceof Error ? e.message : "network error"
       options.onError?.(message, path)

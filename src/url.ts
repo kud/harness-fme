@@ -1,5 +1,5 @@
 import { failure, GUID_RE, type FmeClient, type FmeResult } from "./client.js"
-import { listWorkspaces, resolveEnvironmentId } from "./workspaces.js"
+import { getAllWorkspaces, resolveEnvironmentId } from "./workspaces.js"
 
 // Assemble a Harness FME web-UI deep-link. Accepts workspace/flag/environment
 // by name or id and resolves the GUIDs the URL needs (org slug, project, flag
@@ -23,10 +23,10 @@ export const buildFlagUrl = async (
     environment: string
   },
 ): Promise<FmeResult<{ url: string }>> => {
-  const workspaces = await listWorkspaces(client, { limit: 50, offset: 0 })
+  const workspaces = await getAllWorkspaces(client)
   if (!workspaces.ok)
     return failure(`failed to resolve workspace (${workspaces.message})`)
-  const ws = workspaces.data.objects.find(
+  const ws = workspaces.data.find(
     (w) => w.id === workspace || w.name === workspace,
   )
   if (!ws) return failure(`workspace not found: ${workspace}`)
@@ -38,7 +38,7 @@ export const buildFlagUrl = async (
   let flagId = flag
   if (!GUID_RE.test(flag)) {
     const resolved = await client.request<{ id?: string }>(
-      `/splits/ws/${ws.id}/${flag}`,
+      `/splits/ws/${encodeURIComponent(ws.id)}/${encodeURIComponent(flag)}`,
     )
     if (!resolved.ok)
       return failure(`failed to resolve flag: ${flag} (${resolved.message})`)
@@ -53,9 +53,9 @@ export const buildFlagUrl = async (
     ok: true,
     data: {
       url:
-        `https://app.harness.io/ng/account/${accountId}/all/fme/orgs/${ws.organizationIdentifier}` +
-        `/projects/${ws.projectIdentifier}/org/${orgGuid}/ws/${ws.id}/splits/${flagId}` +
-        `/env/${env.id}/definition`,
+        `https://app.harness.io/ng/account/${encodeURIComponent(accountId)}/all/fme/orgs/${encodeURIComponent(ws.organizationIdentifier)}` +
+        `/projects/${encodeURIComponent(ws.projectIdentifier)}/org/${encodeURIComponent(orgGuid)}/ws/${encodeURIComponent(ws.id)}/splits/${encodeURIComponent(flagId)}` +
+        `/env/${encodeURIComponent(env.id)}/definition`,
     },
   }
 }

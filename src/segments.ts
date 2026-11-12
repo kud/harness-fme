@@ -4,7 +4,7 @@ import { type Page } from "./types.js"
 type Paging = { limit?: number; offset?: number }
 
 const paging = ({ limit = 20, offset = 0 }: Paging) =>
-  new URLSearchParams({ size: String(limit), offset: String(offset) })
+  new URLSearchParams({ limit: String(limit), offset: String(offset) })
 
 const deleted = async (
   client: FmeClient,
@@ -29,7 +29,7 @@ export const listSegments = async (
 ) =>
   withContext(
     await client.request<Page<unknown>>(
-      `/segments/ws/${workspaceId}?${paging(page)}`,
+      `/segments/ws/${encodeURIComponent(workspaceId)}?${paging(page)}`,
     ),
     "failed to fetch segments",
   )
@@ -44,7 +44,7 @@ export const listSegmentDefinitions = async (
 ) =>
   withContext(
     await client.request<Page<unknown>>(
-      `/segments/ws/${workspaceId}/environments/${environmentId}?${paging(page)}`,
+      `/segments/ws/${encodeURIComponent(workspaceId)}/environments/${encodeURIComponent(environmentId)}?${paging(page)}`,
     ),
     "failed to fetch segment definitions",
   )
@@ -64,7 +64,7 @@ export const listSegmentKeys = async (
 ) =>
   withContext(
     await client.request<{ keys: { key: string }[]; count: number }>(
-      `/segments/${environmentId}/${segmentName}/keys?${paging(page)}`,
+      `/segments/${encodeURIComponent(environmentId)}/${encodeURIComponent(segmentName)}/keys?${paging(page)}`,
     ),
     `failed to fetch segment keys: ${segmentName}`,
   )
@@ -87,7 +87,7 @@ export const createSegment = async (
 ) =>
   withContext(
     await client.request<unknown>(
-      `/segments/ws/${workspaceId}/trafficTypes/${trafficType}`,
+      `/segments/ws/${encodeURIComponent(workspaceId)}/trafficTypes/${encodeURIComponent(trafficType)}`,
       {
         method: "POST",
         body: {
@@ -108,10 +108,13 @@ export const enableSegmentInEnvironment = async (
   }: { environmentId: string; segmentName: string },
 ) =>
   withContext(
-    await client.request<unknown>(`/segments/${environmentId}/${segmentName}`, {
-      method: "POST",
-      body: {},
-    }),
+    await client.request<unknown>(
+      `/segments/${encodeURIComponent(environmentId)}/${encodeURIComponent(segmentName)}`,
+      {
+        method: "POST",
+        body: {},
+      },
+    ),
     `failed to enable segment: ${segmentName}`,
   )
 
@@ -154,7 +157,7 @@ export const addSegmentKeys = async (
   const query = new URLSearchParams({ replace: String(Boolean(replace)) })
   return withContext(
     await client.request<unknown>(
-      `/segments/${environmentId}/${segmentName}/uploadKeys?${query}`,
+      `/segments/${encodeURIComponent(environmentId)}/${encodeURIComponent(segmentName)}/uploadKeys?${query}`,
       { method: "PUT", body: segmentKeysBody(keys, title, comment) },
     ),
     `failed to add keys to segment: ${segmentName}`,
@@ -180,7 +183,7 @@ export const removeSegmentKeys = async (
   if (keys.length === 0) return failure("keys must be a non-empty array")
   return withContext(
     await client.request<unknown>(
-      `/segments/${environmentId}/${segmentName}/removeKeys`,
+      `/segments/${encodeURIComponent(environmentId)}/${encodeURIComponent(segmentName)}/removeKeys`,
       { method: "PUT", body: segmentKeysBody(keys, title, comment) },
     ),
     `failed to remove keys from segment: ${segmentName}`,
@@ -196,7 +199,7 @@ export const disableSegmentInEnvironment = (
 ) =>
   deleted(
     client,
-    `/segments/${environmentId}/${segmentName}`,
+    `/segments/${encodeURIComponent(environmentId)}/${encodeURIComponent(segmentName)}`,
     `failed to disable segment: ${segmentName}`,
     { disabled: segmentName, environment: environmentId },
   )
@@ -207,7 +210,7 @@ export const deleteSegment = (
 ) =>
   deleted(
     client,
-    `/segments/ws/${workspaceId}/${segmentName}`,
+    `/segments/ws/${encodeURIComponent(workspaceId)}/${encodeURIComponent(segmentName)}`,
     `failed to delete segment: ${segmentName}`,
     { deleted: segmentName },
   )
@@ -220,7 +223,7 @@ export const listRuleBasedSegments = async (
 ) =>
   withContext(
     await client.request<unknown>(
-      `/rule-based-segments/ws/${workspaceId}?${paging(page)}`,
+      `/rule-based-segments/ws/${encodeURIComponent(workspaceId)}?${paging(page)}`,
     ),
     "failed to fetch rule-based segments",
   )
@@ -231,7 +234,7 @@ export const getRuleBasedSegment = async (
 ) =>
   withContext(
     await client.request<unknown>(
-      `/rule-based-segments/ws/${workspaceId}/${segmentName}`,
+      `/rule-based-segments/ws/${encodeURIComponent(workspaceId)}/${encodeURIComponent(segmentName)}`,
     ),
     `failed to fetch rule-based segment: ${segmentName}`,
   )
@@ -252,7 +255,7 @@ export const createRuleBasedSegment = async (
 ) =>
   withContext(
     await client.request<unknown>(
-      `/rule-based-segments/ws/${workspaceId}/trafficTypes/${trafficType}`,
+      `/rule-based-segments/ws/${encodeURIComponent(workspaceId)}/trafficTypes/${encodeURIComponent(trafficType)}`,
       {
         method: "POST",
         body: { name, ...(description ? { description } : {}) },
@@ -267,7 +270,7 @@ export const deleteRuleBasedSegment = (
 ) =>
   deleted(
     client,
-    `/rule-based-segments/ws/${workspaceId}/${segmentName}`,
+    `/rule-based-segments/ws/${encodeURIComponent(workspaceId)}/${encodeURIComponent(segmentName)}`,
     `failed to delete rule-based segment: ${segmentName}`,
     { deleted: segmentName },
   )
@@ -281,7 +284,7 @@ export const listRuleBasedSegmentDefinitions = async (
 ) =>
   withContext(
     await client.request<unknown>(
-      `/rule-based-segments/ws/${workspaceId}/environments/${environmentId}`,
+      `/rule-based-segments/ws/${encodeURIComponent(workspaceId)}/environments/${encodeURIComponent(environmentId)}`,
     ),
     "failed to fetch rule-based segment definitions",
   )
@@ -313,7 +316,7 @@ export const updateRuleBasedSegmentDefinition = async (
   if (!parsed) return failure("definition must be valid JSON")
   return withContext(
     await client.request<unknown>(
-      `/rule-based-segments/ws/${workspaceId}/${segmentName}/environments/${environmentId}`,
+      `/rule-based-segments/ws/${encodeURIComponent(workspaceId)}/${encodeURIComponent(segmentName)}/environments/${encodeURIComponent(environmentId)}`,
       { method: "PUT", body: parsed },
     ),
     `failed to update rule-based segment definition for: ${segmentName}`,
@@ -329,7 +332,7 @@ export const enableRuleBasedSegmentDefinition = async (
 ) =>
   withContext(
     await client.request<unknown>(
-      `/rule-based-segments/${environmentId}/${segmentName}`,
+      `/rule-based-segments/${encodeURIComponent(environmentId)}/${encodeURIComponent(segmentName)}`,
       { method: "POST", body: {} },
     ),
     `failed to enable rule-based segment: ${segmentName}`,
@@ -344,7 +347,7 @@ export const disableRuleBasedSegmentDefinition = (
 ) =>
   deleted(
     client,
-    `/rule-based-segments/${environmentId}/${segmentName}`,
+    `/rule-based-segments/${encodeURIComponent(environmentId)}/${encodeURIComponent(segmentName)}`,
     `failed to disable rule-based segment: ${segmentName}`,
     { disabled: segmentName, environment: environmentId },
   )
@@ -374,7 +377,7 @@ export const createRuleBasedSegmentChangeRequest = async (
   if (!parsed) return failure("rule_based_segment must be valid JSON")
   return withContext(
     await client.request<unknown>(
-      `/changeRequests/ws/${workspaceId}/environments/${environmentId}`,
+      `/changeRequests/ws/${encodeURIComponent(workspaceId)}/environments/${encodeURIComponent(environmentId)}`,
       {
         method: "POST",
         body: {

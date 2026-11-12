@@ -90,6 +90,47 @@ describe("createClient", () => {
   })
 })
 
+describe("empty and non-JSON 2xx bodies", () => {
+  it("reports an empty 200 as a success with null data", async () => {
+    const fetchMock = vi.fn(async () => new Response("", { status: 200 }))
+    const client = createClient({ apiKey: "k", fetch: fetchMock })
+    const result = await client.request("/splits/ws/w/flag/kill", {
+      method: "PUT",
+    })
+    expect(result).toEqual({ ok: true, data: null })
+  })
+
+  it("reports a 204 as a success with null data", async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }))
+    const client = createClient({ apiKey: "k", fetch: fetchMock })
+    const result = await client.request("/anything", { method: "DELETE" })
+    expect(result).toEqual({ ok: true, data: null })
+  })
+
+  it("reports a 200 whose body is not JSON as a success with null data", async () => {
+    const fetchMock = vi.fn(
+      async () => new Response("gateway says hi", { status: 200 }),
+    )
+    const client = createClient({ apiKey: "k", fetch: fetchMock })
+    const result = await client.request("/anything")
+    expect(result).toEqual({ ok: true, data: null })
+  })
+
+  it("still parses a mock that only provides json()", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        ({
+          ok: true,
+          status: 200,
+          json: async () => ({ fine: true }),
+        }) as unknown as Response,
+    )
+    const client = createClient({ apiKey: "k", fetch: fetchMock })
+    const result = await client.request<{ fine: boolean }>("/anything")
+    expect(result).toEqual({ ok: true, data: { fine: true } })
+  })
+})
+
 describe("rateLimitWaitMs", () => {
   const withHeaders = (headers: Record<string, string>) =>
     ({ headers: new Headers(headers) }) as Response

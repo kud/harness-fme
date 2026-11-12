@@ -54,7 +54,7 @@ export const listFeatureFlags = async (
     ...(name ? { name } : {}),
   })
   const result = await client.request<Page<FeatureFlag>>(
-    `/splits/ws/${workspaceId}?${query}`,
+    `/splits/ws/${encodeURIComponent(workspaceId)}?${query}`,
   )
   if (!result.ok) return withContext(result, "failed to fetch feature flags")
   for (const item of result.data.objects ?? []) {
@@ -84,7 +84,7 @@ export const getFeatureFlag = async (
   { workspaceId, flagName }: FlagRef,
 ): Promise<FmeResult<FeatureFlag>> => {
   const result = await client.request<FeatureFlag>(
-    `/splits/ws/${workspaceId}/${flagName}`,
+    `/splits/ws/${encodeURIComponent(workspaceId)}/${encodeURIComponent(flagName)}`,
   )
   if (!result.ok)
     return withContext(result, `failed to fetch feature flag: ${flagName}`)
@@ -98,7 +98,7 @@ export const getFlagDefinition = async (
 ): Promise<FmeResult<FlagDefinition>> =>
   withContext(
     await client.request<FlagDefinition>(
-      `/splits/ws/${workspaceId}/${flagName}/environments/${environmentId}`,
+      `/splits/ws/${encodeURIComponent(workspaceId)}/${encodeURIComponent(flagName)}/environments/${encodeURIComponent(environmentId)}`,
     ),
     `failed to fetch flag definition: ${flagName}`,
   )
@@ -109,7 +109,7 @@ export const killFeatureFlag = async (
 ) =>
   withContext(
     await client.request<unknown>(
-      `/splits/ws/${workspaceId}/${flagName}/environments/${environmentId}/kill`,
+      `/splits/ws/${encodeURIComponent(workspaceId)}/${encodeURIComponent(flagName)}/environments/${encodeURIComponent(environmentId)}/kill`,
       { method: "PUT" },
     ),
     `failed to kill feature flag: ${flagName}`,
@@ -121,7 +121,7 @@ export const restoreFeatureFlag = async (
 ) =>
   withContext(
     await client.request<unknown>(
-      `/splits/ws/${workspaceId}/${flagName}/environments/${environmentId}/restore`,
+      `/splits/ws/${encodeURIComponent(workspaceId)}/${encodeURIComponent(flagName)}/environments/${encodeURIComponent(environmentId)}/restore`,
       { method: "PUT" },
     ),
     `failed to restore feature flag: ${flagName}`,
@@ -143,7 +143,7 @@ export const createFeatureFlag = async (
 ) =>
   withContext(
     await client.request<unknown>(
-      `/splits/ws/${workspaceId}/trafficTypes/${trafficType}`,
+      `/splits/ws/${encodeURIComponent(workspaceId)}/trafficTypes/${encodeURIComponent(trafficType)}`,
       {
         method: "POST",
         body: { name, ...(description ? { description } : {}) },
@@ -187,10 +187,13 @@ export const updateFeatureFlag = async (
     })
   if (ops.length === 0) return failure("provide at least one field to update")
   return withContext(
-    await client.request<unknown>(`/splits/ws/${workspaceId}/${flagName}`, {
-      method: "PATCH",
-      body: ops,
-    }),
+    await client.request<unknown>(
+      `/splits/ws/${encodeURIComponent(workspaceId)}/${encodeURIComponent(flagName)}`,
+      {
+        method: "PATCH",
+        body: ops,
+      },
+    ),
     `failed to update feature flag: ${flagName}`,
   )
 }
@@ -200,7 +203,7 @@ export const deleteFeatureFlag = async (
   { workspaceId, flagName }: FlagRef,
 ) => {
   const result = await client.request<undefined>(
-    `/splits/ws/${workspaceId}/${flagName}`,
+    `/splits/ws/${encodeURIComponent(workspaceId)}/${encodeURIComponent(flagName)}`,
     { method: "DELETE", expectBody: false },
   )
   return result.ok
@@ -214,7 +217,7 @@ export const archiveFeatureFlag = async (
 ) =>
   withContext(
     await client.request<unknown>(
-      `/splits/ws/${workspaceId}/${flagName}/archive`,
+      `/splits/ws/${encodeURIComponent(workspaceId)}/${encodeURIComponent(flagName)}/archive`,
       { method: "POST" },
     ),
     `failed to archive feature flag: ${flagName}`,
@@ -226,7 +229,7 @@ export const unarchiveFeatureFlag = async (
 ) =>
   withContext(
     await client.request<unknown>(
-      `/splits/ws/${workspaceId}/${flagName}/unarchive`,
+      `/splits/ws/${encodeURIComponent(workspaceId)}/${encodeURIComponent(flagName)}/unarchive`,
       { method: "POST" },
     ),
     `failed to unarchive feature flag: ${flagName}`,
@@ -257,7 +260,7 @@ export const listFlagDefinitions = async (
   // https://docs.split.io/reference/list-feature-flag-definitions-in-environment
   return withContext(
     await client.request<Page<FlagDefinition>>(
-      `/splits/ws/${workspaceId}/environments/${environmentId}?${query}`,
+      `/splits/ws/${encodeURIComponent(workspaceId)}/environments/${encodeURIComponent(environmentId)}?${query}`,
     ),
     "failed to fetch flag definitions",
   )
@@ -337,7 +340,7 @@ const writeDefinition = async (
   if ("error" in merged) return failure(merged.error)
   return withContext(
     await client.request<unknown>(
-      `/splits/ws/${workspaceId}/${flagName}/environments/${environmentId}`,
+      `/splits/ws/${encodeURIComponent(workspaceId)}/${encodeURIComponent(flagName)}/environments/${encodeURIComponent(environmentId)}`,
       { method, body: merged.body },
     ),
     `failed to ${verb} flag definition for: ${flagName}`,
@@ -375,7 +378,7 @@ export const addSegmentToTreatment = async (
     comment?: string
   },
 ): Promise<FmeResult<{ unchanged: true; message: string } | unknown>> => {
-  const path = `/splits/ws/${workspaceId}/${flagName}/environments/${environmentId}`
+  const path = `/splits/ws/${encodeURIComponent(workspaceId)}/${encodeURIComponent(flagName)}/environments/${encodeURIComponent(environmentId)}`
   const current = await client.request<Record<string, unknown>>(path)
   if (!current.ok)
     return withContext(current, `failed to fetch flag definition: ${flagName}`)
@@ -413,7 +416,7 @@ export const deleteFlagDefinition = async (
   { workspaceId, environmentId, flagName }: FlagEnvRef,
 ) => {
   const result = await client.request<undefined>(
-    `/splits/ws/${workspaceId}/${flagName}/environments/${environmentId}`,
+    `/splits/ws/${encodeURIComponent(workspaceId)}/${encodeURIComponent(flagName)}/environments/${encodeURIComponent(environmentId)}`,
     { method: "DELETE", expectBody: false },
   )
   return result.ok

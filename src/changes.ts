@@ -191,7 +191,7 @@ export const applyChanges = async (
     }
 
     const written = await client.request<unknown>(
-      `/splits/ws/${workspaceId}/${flag}/environments/${environmentId}`,
+      `/splits/ws/${encodeURIComponent(workspaceId)}/${encodeURIComponent(flag)}/environments/${encodeURIComponent(environmentId)}`,
       { method: "PUT", body: buildWriteBody(outcome.next, { title, comment }) },
     )
     if (!written.ok)

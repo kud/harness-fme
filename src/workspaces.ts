@@ -19,7 +19,7 @@ export const listWorkspaces = async (
 ) =>
   withContext(
     await client.request<Page<Workspace>>(
-      `/workspaces?size=${limit}&offset=${offset}`,
+      `/workspaces?limit=${limit}&offset=${offset}`,
     ),
     "failed to fetch workspaces",
   )
@@ -33,7 +33,9 @@ export const listEnvironments = async (
   { workspaceId }: { workspaceId: string },
 ): Promise<FmeResult<unknown>> =>
   withContext(
-    await client.request<unknown>(`/environments/ws/${workspaceId}`),
+    await client.request<unknown>(
+      `/environments/ws/${encodeURIComponent(workspaceId)}`,
+    ),
     "failed to fetch environments",
   )
 
@@ -43,7 +45,7 @@ export const getEnvironments = async (
 ): Promise<FmeResult<Environment[]>> => {
   const result = await client.request<
     Environment[] | { objects?: Environment[] }
-  >(`/environments/ws/${workspaceId}`)
+  >(`/environments/ws/${encodeURIComponent(workspaceId)}`)
   return result.ok
     ? { ok: true, data: asArray(result.data) }
     : withContext(result, "failed to fetch environments")
@@ -55,7 +57,7 @@ export const listTrafficTypes = async (
 ) =>
   withContext(
     await client.request<{ objects: unknown[] }>(
-      `/trafficTypes/ws/${workspaceId}`,
+      `/trafficTypes/ws/${encodeURIComponent(workspaceId)}`,
     ),
     "failed to fetch traffic types",
   )
@@ -66,7 +68,7 @@ export const listRolloutStatuses = async (
 ) =>
   withContext(
     await client.request<RolloutStatus[] | { objects?: RolloutStatus[] }>(
-      `/rolloutStatuses/ws/${workspaceId}`,
+      `/rolloutStatuses/ws/${encodeURIComponent(workspaceId)}`,
     ),
     "failed to fetch rollout statuses",
   )
