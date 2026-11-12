@@ -1,29 +1,37 @@
-# @kud/harness-fme
+<div align="center">
 
-> A headless, surface-agnostic client for the Harness FME (formerly Split.io) admin API, with a safe plan, backup, write and read-back engine for flag changes.
+🚩
 
-[![npm](https://img.shields.io/npm/v/@kud/harness-fme)](https://www.npmjs.com/package/@kud/harness-fme)
-[![licence](https://img.shields.io/npm/l/@kud/harness-fme)](./LICENSE)
-[![node](https://img.shields.io/node/v/@kud/harness-fme)](./package.json)
+# Harness FME
 
-This is the shared core behind the other Harness FME tools. It talks to `https://api.split.io/internal/api/v2`, returns typed results instead of throwing, copes with the organisation-wide rate limit, and ships an engine for changing flag definitions without nasty surprises. It has no terminal, no MCP and no prompts of its own, so any surface can sit on top of it.
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=node.js&logoColor=white)
+![npm](https://img.shields.io/npm/v/@kud/harness-fme?style=flat-square&color=CB3837)
+![MIT](https://img.shields.io/badge/licence-MIT-22C55E?style=flat-square)
 
-Two sibling packages do exactly that:
+**Headless Harness FME (Split) admin API client: typed reads, rate-limited requests and a safe plan, backup, write and read-back engine for flag changes.**
 
-- [`@kud/harness-fme-cli`](https://www.npmjs.com/package/@kud/harness-fme-cli) for the terminal
-- [`@kud/mcp-harness-fme`](https://www.npmjs.com/package/@kud/mcp-harness-fme) for MCP clients
+<a href="https://kud.io/projects/harness-fme">Website</a> · <a href="https://kud.io/projects/harness-fme/docs">Documentation</a>
+
+</div>
 
 ## Features
 
-- **Never throws for API errors.** Every call returns an `FmeResult`: `{ ok: true, data }` or `{ ok: false, message, status? }`.
-- **Key kept in a closure.** The API key is never stored on the client object, so logging or serialising it cannot print it.
-- **Rate-limit aware.** Optional request spacing, and 429s are retried by waiting out the window named in the `x-ratelimit-reset-seconds-org` / `-ip` headers.
-- **Broad resource coverage.** Workspaces, environments, feature flags (list, get, create, update, delete, archive, kill, restore), flag definitions, classic and rule-based segments, and a flag URL builder.
-- **Honest paging.** Pages are walked to the end by what the API actually returns, not by what was asked for.
-- **A safe-write engine.** Plan from reads only, take a backup before each write, write with a title and comment, read back and diff against the plan, stop at the first failure.
-- **A production gate.** Writes are a plan until you say go; an environment matching `/prod/i` also needs its exact name typed.
-- **Pure helpers.** Diffing, definition normalisation, rollout classification and rollout-table builders.
-- **ESM only, Node 20 or later, zero runtime dependencies.**
+- **Results, not exceptions** — every call returns an `FmeResult`: `{ ok: true, data }` or `{ ok: false, message, status? }`
+- **Key kept in a closure** — the API key is never stored on the client object, so logging or serialising the client cannot print it
+- **Rate-limit aware** — optional request spacing, and 429s are retried by waiting out the window named in the `x-ratelimit-reset-seconds-org` / `-ip` headers
+- **Broad resource coverage** — workspaces, environments, feature flags, flag definitions, classic and rule-based segments, and a flag URL builder
+- **Honest paging** — pages are walked to the end by what the API actually returns, using `limit` (the API ignores `size`), never by what was asked for
+- **A safe-write engine** — plan from reads only, take a backup before each write, write with a title and comment, read back and diff against the plan, stop at the first failure
+- **A production gate** — writes stay a plan until you say go; an environment matching `/prod/i` also needs its exact name typed
+- **Pure helpers** — diffing, definition normalisation, rollout classification and rollout-table builders
+- **Zero runtime dependencies** — ESM only, Node.js 20 or later
+
+Surface-agnostic by design: this package holds no terminal, no MCP and no prompts, just data, actions and the write engine. Three siblings sit on top of it:
+
+- [`@kud/harness-fme-cli`](https://www.npmjs.com/package/@kud/harness-fme-cli) for the terminal
+- [`@kud/harness-fme-ink`](https://www.npmjs.com/package/@kud/harness-fme-ink) for the interactive terminal UI
+- [`@kud/mcp-harness-fme`](https://www.npmjs.com/package/@kud/mcp-harness-fme) for MCP clients
 
 ## Install
 
@@ -112,6 +120,20 @@ const outcome = await applyChanges(client, {
 ```
 
 `planChanges` only reads. `applyChanges` refuses to write unless `guard.go` is true, and for a production-looking environment `guard.environmentArg` must equal the environment's exact name.
+
+Adding a tester to a segment-backed treatment is the same idea in one call:
+
+```ts
+import { addSegmentToTreatment } from "@kud/harness-fme"
+
+const result = await addSegmentToTreatment(client, {
+  workspaceId: "11111111-2222-4333-8444-555555555555",
+  environmentId: environment.id,
+  flagName: "checkout_new_flow",
+  treatment: "on",
+  segment: "beta_testers",
+})
+```
 
 ## API reference
 
@@ -259,6 +281,7 @@ All types (`Workspace`, `Environment`, `FeatureFlag`, `Treatment`, `FlagDefiniti
 git clone https://github.com/kud/harness-fme.git
 cd harness-fme
 npm install
+npm run build
 ```
 
 | Script                | What it does                            |
@@ -271,6 +294,4 @@ npm install
 
 The tests run against an in-memory fake of the API (`src/__tests__/fake-api.ts`), so they need no key and make no network calls.
 
-## Licence
-
-MIT
+📚 **Full documentation → [harness-fme/docs](https://kud.io/projects/harness-fme/docs)**
