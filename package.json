@@ -32,7 +32,7 @@
     "api-client",
     "typescript"
   ],
-  "homepage": "https://www.npmjs.com/package/@kud/harness-fme",
+  "homepage": "https://kud.io/projects/harness-fme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kud/harness-fme.git"
