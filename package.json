@@ -1,6 +1,6 @@
 {
   "name": "@kud/harness-fme",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Headless Harness FME (Split) admin API client: typed reads, rate-limited requests and a safe plan, backup, write and read-back engine for flag changes.",
   "main": "dist/index.js",
