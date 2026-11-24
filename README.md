@@ -24,7 +24,9 @@
 - **Honest paging** — pages are walked to the end by what the API actually returns, using `limit` (the API ignores `size`), never by what was asked for
 - **A safe-write engine** — plan from reads only, take a backup before each write, write with a title and comment, read back and diff against the plan, stop at the first failure
 - **A production gate** — writes stay a plan until you say go; an environment matching `/prod/i` also needs its exact name typed
-- **Pure helpers** — diffing, definition normalisation, rollout classification and rollout-table builders
+- **Pure helpers** — diffing, definition normalisation, rollout classification, rollout-table builders and a cross-environment comparison
+- **Readable output** — ISO 8601 twins for epoch-millisecond times, owners by name, workspaces and traffic types by name or id
+- **Change history** — a flag's published change requests per environment, each diffed against the one before
 - **Zero runtime dependencies** — ESM only, Node.js 20 or later
 
 Surface-agnostic by design: this package holds no terminal, no MCP and no prompts, just data, actions and the write engine. Three siblings sit on top of it:
@@ -177,16 +179,18 @@ Network failures and non-2xx responses both come back as `ok: false`. The `statu
 
 ### Workspaces and environments
 
-| Export                                        | Purpose                                                                          |
-| --------------------------------------------- | -------------------------------------------------------------------------------- |
-| `listWorkspaces(client, { limit?, offset? })` | One page of workspaces.                                                          |
-| `getAllWorkspaces(client)`                    | Every workspace, paged to the end.                                               |
-| `resolveWorkspace(client, reference?)`        | By id or name; with no reference, the only workspace, else an error naming them. |
-| `listEnvironments(client, { workspaceId })`   | The raw environments response.                                                   |
-| `getEnvironments(client, { workspaceId })`    | Environments as a normalised array.                                              |
-| `resolveEnvironment(client, wsId, ref)`       | By id or name (case-insensitive), always looked up so its real name is known.    |
-| `resolveEnvironmentId(client, wsId, ref)`     | Id-only variant; a bare GUID passes through without a lookup.                    |
-| `listTrafficTypes`, `listRolloutStatuses`     | Reference data for a workspace.                                                  |
+| Export                                        | Purpose                                                                           |
+| --------------------------------------------- | --------------------------------------------------------------------------------- |
+| `listWorkspaces(client, { limit?, offset? })` | One page of workspaces.                                                           |
+| `getAllWorkspaces(client)`                    | Every workspace, paged to the end.                                                |
+| `resolveWorkspace(client, reference?)`        | By id or name; with no reference, the only workspace, else an error naming them.  |
+| `listEnvironments(client, { workspaceId })`   | The raw environments response.                                                    |
+| `getEnvironments(client, { workspaceId })`    | Environments as a normalised array.                                               |
+| `resolveEnvironment(client, wsId, ref)`       | By id or name (case-insensitive), always looked up so its real name is known.     |
+| `resolveEnvironmentId(client, wsId, ref)`     | Id-only variant; a bare GUID passes through without a lookup.                     |
+| `listTrafficTypes`, `listRolloutStatuses`     | Reference data for a workspace.                                                   |
+| `resolveWorkspaceId(client, ref)`             | A workspace id from a name or an id; a bare GUID passes through without a lookup. |
+| `getTrafficTypes`, `resolveTrafficType`       | Traffic types as an array, and one by id or name (case-insensitive).              |
 
 ### Feature flags
 
@@ -211,6 +215,32 @@ Network failures and non-2xx responses both come back as `ok: false`. The `statu
 | `deleteFlagDefinition`                          | Remove a flag from an environment.                                                |
 | `addSegmentToTreatment`                         | Read-modify-write, so a dropped field cannot wipe existing targeting. Idempotent. |
 | `withTitleComment(parsed, title?, comment?)`    | Merge a title and comment into a definition body.                                 |
+
+### Reading one flag across environments
+
+| Export                                                                      | Purpose                                                                                                                                                           |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `compareFlagEnvironments(client, { workspaceId, flagName, environments? })` | One flag in every environment (or those given), side by side, with `differences`: the fields not the same everywhere.                                             |
+| `summariseDefinition(environment, def?)`, `compareDefinitions(flag, views)` | The pure halves: summarise one definition, compare several.                                                                                                       |
+| `describeRule(rule)`                                                        | One targeting rule on one line: conditions, then what it serves.                                                                                                  |
+| `withIsoTimes(value)`, `toIso(ms)`                                          | A deep copy where every epoch-millisecond time field (`lastUpdateTime`, `creationTime`, …) gets an ISO 8601 twin, `<field>Iso`.                                   |
+| `withOwnerNames(client, flag)`, `createOwnerResolver(client)`               | Owners resolved to display names through `/users/{id}` and `/groups/{id}`, keeping the id; one read per owner. An owner the API will not name keeps `name: null`. |
+
+A comparison looks at `defined`, `killed`, `defaultTreatment`, `defaultRule`, `trafficAllocation`, `treatments` and `rules`. Treatments are compared on their full membership, order aside, so two environments with three keys each but not the same three still differ. Stamps such as `lastUpdateTime` are shown but never count.
+
+### Change history
+
+The admin API has no audit log for flags: the web UI's per-environment audit log is not exposed, and a past definition cannot be fetched by `changeNumber`. What it does keep is every change request, each with the full definition it proposed ([change requests reference](https://developer.harness.io/feature-management-experimentation/split-api-reference/change-requests)). History here is built from those.
+
+| Export                                                                                  | Purpose                                                                                                                          |
+| --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `getFlagHistory(client, { environmentId, flagName, status?, limit?, maxPages? })`       | A flag's change requests in one environment, newest first, each diffed against the one before. `status` defaults to `PUBLISHED`. |
+| `listChangeRequests(client, { environmentId?, workspaceId?, status?, limit?, after? })` | One page of change requests, with `nextMarker` for the next.                                                                     |
+| `buildFlagHistory(changeRequests)`                                                      | The pure half: sort, attribute and diff.                                                                                         |
+
+Each change carries `title`, `changeType`, `approvers`, `editedBy`, `status`, `time` and `timeIso` (the columns of the web UI's audit log), plus `defaultRuleBefore`, `defaultRuleAfter` and a field-level `diff` over killed, default treatment, default rule, traffic allocation, treatments and rules.
+
+Limits worth knowing: a change made without an approval flow never becomes a change request and does not appear; the endpoint cannot filter by flag, so pages are read and filtered client-side (up to `maxPages` pages of 100); and it needs an admin API key with access to change requests, not one restricted to an environment.
 
 ### Segments
 

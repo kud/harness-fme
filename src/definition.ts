@@ -202,3 +202,45 @@ export const withDefaultRule = (
   next.defaultRule = buckets
   return next
 }
+
+// One targeting rule on one line: its conditions, then what it serves, e.g.
+// `IN_SEGMENT beta-testers AND plan IN_LIST_STRING [pro] -> on 100%`. Unknown
+// shapes fall back to their JSON so nothing is silently hidden.
+export const describeRule = (rule: unknown): string => {
+  if (!rule || typeof rule !== "object") return JSON.stringify(rule)
+  const r = rule as {
+    buckets?: Bucket[]
+    condition?: { combiner?: string; matchers?: Record<string, unknown>[] }
+  }
+  const matchers = r.condition?.matchers
+  if (!Array.isArray(matchers) || !Array.isArray(r.buckets))
+    return JSON.stringify(rule)
+  const describeMatcher = (m: Record<string, unknown>) => {
+    const value =
+      m.string ??
+      (Array.isArray(m.strings) ? `[${m.strings.join(", ")}]` : undefined) ??
+      m.number ??
+      (m.between && typeof m.between === "object"
+        ? JSON.stringify(m.between)
+        : undefined) ??
+      m.date ??
+      m.depends
+    return [
+      m.negate ? "NOT" : undefined,
+      typeof m.attribute === "string" ? m.attribute : undefined,
+      String(m.type ?? "?"),
+      value === undefined
+        ? undefined
+        : typeof value === "object"
+          ? JSON.stringify(value)
+          : String(value),
+    ]
+      .filter(Boolean)
+      .join(" ")
+  }
+  const condition = matchers
+    .map(describeMatcher)
+    .join(` ${r.condition?.combiner ?? "AND"} `)
+  const serves = r.buckets.map((b) => `${b.treatment} ${b.size}%`).join(" / ")
+  return `${condition || "always"} -> ${serves}`
+}

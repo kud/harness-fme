@@ -159,3 +159,51 @@ export const resolveEnvironmentId = async (
     }
   return { id: env.id }
 }
+
+// A workspace id for a reference that may be a name. A GUID is taken as an id
+// without a lookup, so callers that already hold ids pay nothing extra.
+export const resolveWorkspaceId = async (
+  client: FmeClient,
+  reference: string,
+): Promise<FmeResult<string>> => {
+  if (GUID_RE.test(reference)) return { ok: true, data: reference }
+  const found = await resolveWorkspace(client, reference)
+  return found.ok ? { ok: true, data: found.data.id } : found
+}
+
+export type TrafficType = { id: string; name: string; [key: string]: unknown }
+
+export const getTrafficTypes = async (
+  client: FmeClient,
+  { workspaceId }: { workspaceId: string },
+): Promise<FmeResult<TrafficType[]>> => {
+  const result = await client.request<
+    TrafficType[] | { objects?: TrafficType[] }
+  >(`/trafficTypes/ws/${encodeURIComponent(workspaceId)}`)
+  return result.ok
+    ? { ok: true, data: asArray(result.data) }
+    : withContext(result, "failed to fetch traffic types")
+}
+
+// Resolve a traffic type by id or name (name matching ignores case).
+export const resolveTrafficType = async (
+  client: FmeClient,
+  workspaceId: string,
+  reference: string,
+): Promise<FmeResult<TrafficType>> => {
+  const result = await getTrafficTypes(client, { workspaceId })
+  if (!result.ok) return result
+  const found = result.data.find(
+    (t) =>
+      t.id === reference ||
+      t.name === reference ||
+      t.name.toLowerCase() === reference.toLowerCase(),
+  )
+  if (!found)
+    return failure(
+      `traffic type not found: ${reference}. Available: ${
+        result.data.map((t) => t.name).join(", ") || "none"
+      }`,
+    )
+  return { ok: true, data: found }
+}
